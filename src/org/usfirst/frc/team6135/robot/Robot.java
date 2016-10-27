@@ -1,15 +1,8 @@
 
 package org.usfirst.frc.team6135.robot;
 
-import edu.wpi.first.wpilibj.CANTalon;
-import edu.wpi.first.wpilibj.Compressor;
-import edu.wpi.first.wpilibj.DoubleSolenoid;
-import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.Joystick;
-import edu.wpi.first.wpilibj.RobotDrive;
-import edu.wpi.first.wpilibj.Servo;
-import edu.wpi.first.wpilibj.Victor;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
@@ -25,8 +18,12 @@ public class Robot extends IterativeRobot {
     final String customAuto = "My Auto";
     String autoSelected;
     SendableChooser chooser;
+    
 	Drive robot;
+	RobotArm arm;
+	RobotShooter shooter;
 	Joystick driveStick;
+	Joystick operatorStick;
     /**
      * This function is run when the robot is first started up and should be
      * used for any initialization code.
@@ -36,8 +33,12 @@ public class Robot extends IterativeRobot {
         chooser.addDefault("Default Auto", defaultAuto);
         chooser.addObject("My Auto", customAuto);
         SmartDashboard.putData("Auto choices", chooser);
-		driveStick = new Joystick(Constants.jStick);
+
+		driveStick = new Joystick(Constants.dStick);
+		operatorStick = new Joystick(Constants.sStick);
 		robot = new Drive(driveStick, Constants.rVicPort, Constants.lVicPort, Constants.lEnc1, Constants.lEnc2, Constants.rEnc1, Constants.rEnc2);
+		arm = new RobotArm(operatorStick, Constants.wVicPort, Constants.lArmTal, Constants.rArmTal);
+		shooter = new RobotShooter(operatorStick, Constants.shootLFTalon, Constants.shootLBVic, Constants.shootRFTalon, Constants.shootRBVic);
     }
     
 	/**
@@ -75,6 +76,9 @@ public class Robot extends IterativeRobot {
      */
     public void teleopPeriodic() {
         robot.teleopDrive();
+        shooter.shooterTick();
+        //arm.rotateArm();
+		robot.toSmartDashboard();
     }
     
     /**
