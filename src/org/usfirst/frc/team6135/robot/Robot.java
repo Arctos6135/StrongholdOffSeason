@@ -24,6 +24,7 @@ public class Robot extends IterativeRobot {
 	RobotShooter shooter;
 	Joystick driveStick;
 	Joystick operatorStick;
+	AutoPhase autoPhase;
     /**
      * This function is run when the robot is first started up and should be
      * used for any initialization code.
@@ -37,8 +38,9 @@ public class Robot extends IterativeRobot {
 		driveStick = new Joystick(Constants.dStick);
 		operatorStick = new Joystick(Constants.sStick);
 		robot = new Drive(driveStick, Constants.rVicPort, Constants.lVicPort, Constants.lEnc1, Constants.lEnc2, Constants.rEnc1, Constants.rEnc2);
-		arm = new RobotArm(operatorStick, Constants.wVicPort, Constants.lArmTal, Constants.rArmTal);
+		//arm = new RobotArm(operatorStick, Constants.wVicPort, Constants.lArmTal, Constants.rArmTal);
 		shooter = new RobotShooter(operatorStick, Constants.shootLFTalon, Constants.shootLBVic, Constants.shootRFTalon, Constants.shootRBVic);
+		autoPhase = new AutoPhase(robot); 
     }
     
 	/**
@@ -52,7 +54,7 @@ public class Robot extends IterativeRobot {
 	 */
     public void autonomousInit() {
     	autoSelected = (String) chooser.getSelected();
-//		autoSelected = SmartDashboard.getString("Auto Selector", defaultAuto);
+		autoSelected = SmartDashboard.getString("Auto Selector", defaultAuto);
 		System.out.println("Auto selected: " + autoSelected);
     }
 
@@ -62,10 +64,11 @@ public class Robot extends IterativeRobot {
     public void autonomousPeriodic() {
     	switch(autoSelected) {
     	case customAuto:
-        //Put custom auto code here   
+         autoPhase.autoProcess3();  
             break;
     	case defaultAuto:
     	default:
+    	autoPhase.autoProcess3();
     	//Put default auto code here
             break;
     	}

@@ -7,7 +7,7 @@ public class AutoPhase {
 	public static int counter=0;
 	Drive robot;
 	public AutoPhase(Drive r) {
-		this.robot=r;
+		this.robot = r;
 		robot.encReset();
 	}
 	public void blastThrough(double travelDis)
@@ -122,7 +122,7 @@ public class AutoPhase {
 	public void autoProcess3Right()
 	{
 		int[] processNums={1,    2,1,   2, 1 ,2, 3};
-		double[button] vals=    {180,90,100,-90,84,-60,0};
+		double[] vals=    {180,90,100,-90,84,-60,0};
 		if(counter<7)
 		{
 			autoProcesses(processNums[counter],vals[counter]);

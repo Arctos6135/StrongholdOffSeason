@@ -15,7 +15,7 @@ public class Drive {
 	private static final double wheelCircum = 2 * Math.PI * wheelRadius;
 
 	//Drive constants
-	private static final double sensitivity = 0.3;
+	private static final double sensitivity = 0;
 	private static final double inputPow = 3;
 	private static final int yAxis = 1;
 	private static final int yReverse = -1;
@@ -134,9 +134,8 @@ public class Drive {
 	public void getValues(double x, double y, boolean sensitivity, boolean acc) {//takes input values and applies appropriate calculations to values to account for human error and/or joystick deficiencies
 		xFinal = x;
 		yFinal = y;
-		
 		if(sensitivity) {
-			xFinal = sensitivityCalc(xFinal);
+			xFinal = sensitivity2Calc(xFinal);
 			yFinal = sensitivityCalc(yFinal);
 		}	
 
@@ -182,6 +181,12 @@ public class Drive {
 	public void teleopDrive() {//Implements individual driving and input methods to allow driving in teleop
 		xInput = xReverse * driveStick.getRawAxis(xAxis);
 		yInput = yReverse * driveStick.getRawAxis(yAxis);
+		if(Math.abs(xInput) < 0.2) {
+			xInput = 0;
+		}
+		if(Math.abs(yInput) < 0.2) {
+			yInput = 0;
+		}
 		if(Math.abs(xInput) < 0.1 && Math.abs(yInput) < 0.1) {
 			encReset();
 			setMotors(0, 0);
@@ -216,8 +221,8 @@ public class Drive {
 		else {
 			//quadrant 2
 			if (driveStick.getRawAxis(xAxis)< -0.2 && driveStick.getRawAxis(yAxis)<-0.2){
-				leftDrive.set(Math.min(-1 * driveStick.getRawAxis(yAxis)/2, 0.5));
 				rightDrive.set(-0.5); //cables resulted inverted motor
+				leftDrive.set(Math.max(-1 * driveStick.getRawAxis(yAxis)/2, -0.5));				
 			}
 			//quadrant 1
 			else if(driveStick.getRawAxis(xAxis)> 0.2 && driveStick.getRawAxis(yAxis)<-0.2){
@@ -235,20 +240,20 @@ public class Drive {
 				leftDrive.set(Math.min(driveStick.getRawAxis(yAxis)/2, 0.5));
 			}
 			else if(driveStick.getRawAxis(xAxis)>=-0.2 && driveStick.getRawAxis(xAxis)<=0.2 &&driveStick.getRawAxis(yAxis)<=-0.2){
-				rightDrive.set(-0.5);
-				leftDrive.set(0.5);
+				rightDrive.set(driveStick.getRawAxis(yAxis));
+				leftDrive.set(-1*driveStick.getRawAxis(yAxis));
 			}
 			else if(driveStick.getRawAxis(xAxis)>=-0.2 && driveStick.getRawAxis(xAxis)<=0.2 &&driveStick.getRawAxis(yAxis)>=0.2){
-				rightDrive.set(0.5);
-				leftDrive.set(-0.5);
+				rightDrive.set(driveStick.getRawAxis(yAxis));
+				leftDrive.set(-1*driveStick.getRawAxis(yAxis));
 			}
 			else if(driveStick.getRawAxis(yAxis)>= -0.2 && driveStick.getRawAxis(yAxis)<=0.2 &&driveStick.getRawAxis(xAxis)<=-0.2){
-				rightDrive.set(0.5);
-				leftDrive.set(0);
+				rightDrive.set(driveStick.getRawAxis(xAxis));
+				leftDrive.set(driveStick.getRawAxis(xAxis));
 			}
 			else if(driveStick.getRawAxis(yAxis)>= -0.2 && driveStick.getRawAxis(yAxis)<=0.2 &&driveStick.getRawAxis(xAxis)>=0.2){
-				rightDrive.set(0);
-				leftDrive.set(0.5);
+				rightDrive.set(driveStick.getRawAxis(xAxis));
+				leftDrive.set(driveStick.getRawAxis(xAxis));
 			}
 			else {
 				rightDrive.set(0);
