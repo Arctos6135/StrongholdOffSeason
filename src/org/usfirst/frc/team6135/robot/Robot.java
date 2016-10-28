@@ -1,361 +1,108 @@
 package org.usfirst.frc.team6135.robot;
 
-import edu.wpi.first.wpilibj.Encoder;
+import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.Joystick;
-import edu.wpi.first.wpilibj.Victor;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
-public class Drive {
-	//Encoder constants
-	private static final boolean lDirReverse = true;
-	private static final boolean rDirReverse = false;
-	private static final int minRate = 10;
-	private static final int sampleAverage = 14;
-	private static final double wheelRadius = 4; //Inches
-	private static final double wheelCircum = 2 * Math.PI * wheelRadius;
+/**
+ * The VM is configured to automatically run this class, and to call the
+ * functions corresponding to each mode, as described in the IterativeRobot
+ * documentation. If you change the name of this class or the package after
+ * creating this project, you must also update the manifest file in the resource
+ * directory.
+ */
+public class Robot extends IterativeRobot {
+    final String defaultAuto = "Default";
+    final String customAuto = "My Auto";
+    final String lowBarAuto = "Low bar";
+    final String autoMID = "AutoMID";
+    final String autoMIDLeft = "AutoMIDLeft";
+    final String autoLEFT= "AutoLEFT";
+    String autoSelected;
+    SendableChooser chooser;
+    
+	Drive robot;
+	RobotArm arm;
+	RobotShooter shooter;
+	Joystick driveStick;
+	Joystick operatorStick;
+	AutoPhase autoPhase;
+    /**
+     * This function is run when the robot is first started up and should be
+     * used for any initialization code.
+     */
+    public void robotInit() {
+        chooser = new SendableChooser();
+        chooser.addDefault("Default Auto", defaultAuto);
+        chooser.addObject("My Auto", customAuto);
+        chooser.addObject("Low Bar", lowBarAuto);
+        chooser.addObject("AutoMID", autoMID);
+        chooser.addObject("AutoMIDLeft", autoMIDLeft);
+        chooser.addObject("AutoLEFT", autoLEFT);
+        SmartDashboard.putData("Auto choices", chooser);
 
-	//Drive constants
-	private static final double sensitivity = 0;
-	private static final double inputPow = 3;
-	private static final int yAxis = 1;
-	private static final int yReverse = -1;
-	private static final int xAxis = 0;
-	private static final int xReverse = 1;
-	private static final double accBound = 0.7; //The speed after which the drive starts to accelerate over time
-	private static final int accLoop = 15; //The number of loops for the bot to accelerate to max speed
-	private static final double compensateDeadzone = 2;
-	private static final double maxCompensate = 0.2;
-	private static final double compensateInc = 0.001;
-	private static final int lReverse = 1;
-	//private static final boolean lReverse; will replace int
-	//private static final boolean rReverse; will replace int
-	private static final int rReverse = -1;
-	private static final double motorCurvePow = 1.0; //The type of curve relating pwm to velocity
-	private static final boolean useSensitivityCalc = true;
-	private static final boolean useAccelerateCalc = true;
-	private static final boolean useCompensate = false;
+		driveStick = new Joystick(Constants.dStick);
+		operatorStick = new Joystick(Constants.sStick);
+		robot = new Drive(driveStick, Constants.rVicPort, Constants.lVicPort, Constants.lEnc1, Constants.lEnc2, Constants.rEnc1, Constants.rEnc2);
+		//arm = new RobotArm(operatorStick, Constants.wVicPort, Constants.lArmTal, Constants.rArmTal);
+		shooter = new RobotShooter(operatorStick, Constants.shootLFTalon, Constants.shootLBVic, Constants.shootRFTalon, Constants.shootRBVic);
+		autoPhase = new AutoPhase(robot); 
+    }
+    
+	/**
+	 * This autonomous (along with the chooser code above) shows how to select between different autonomous modes
+	 * using the dashboard. The sendable chooser code works with the Java SmartDashboard. If you prefer the LabVIEW
+	 * Dashboard, remove all of the chooser code and uncomment the getString line to get the auto name from the text box
+	 * below the Gyro
+	 *
+	 * You can add additional auto modes by adding additional comparisons to the switch structure below with additional strings.
+	 * If using the SendableChooser make sure to add them to the chooser code above as well.
+	 */
+    public void autonomousInit() {
+    	autoSelected = (String) chooser.getSelected();
+		autoSelected = SmartDashboard.getString("Auto Selector", defaultAuto);
+		System.out.println("Auto selected: " + autoSelected);
+    }
 
-	//Object Declarations
-	private Joystick driveStick = null;
-	private Victor leftDrive = null;
-	private Victor rightDrive = null;
-	private Encoder leftEnc = null;
-	private Encoder rightEnc = null;
-
-	//Variables Used
-	private double xInput;
-	private double yInput;
-	private double xFinal;
-	private double yFinal;
-	private int accLoopCount = 0;
-	private double lCompensate = 0.0;
-	private double rCompensate = 0.0;
-	private double compensate = 0.0;
-	private double lSpeed = 0.0;
-	private double rSpeed = 0.0;
-	private double lPrev = 0.0;
-	private double rPrev = 0.0;
-	private int leadMotor = -1; //-1 means neither motor is being scaled    0 means left motor is being scaled down    1 means right motor is being scaled down
-	
-	//Constructors
-	public Drive(Joystick j, int rDrive, int lDrive, int lEnc1, int lEnc2, int rEnc1, int rEnc2) {
-		driveStick = j;
-		leftDrive = new Victor(lDrive);
-		rightDrive = new Victor(rDrive);
-		leftEnc = new Encoder(lEnc1, lEnc2, lDirReverse, Encoder.EncodingType.k2X);
-		rightEnc = new Encoder(rEnc1, rEnc2, rDirReverse, Encoder.EncodingType.k2X);
-		leftEnc.setMinRate(minRate);
-		rightEnc.setMinRate(minRate);
-		leftEnc.setSamplesToAverage(sampleAverage);
-		rightEnc.setSamplesToAverage(sampleAverage);
-		leftEnc.setDistancePerPulse(wheelCircum);
-		rightEnc.setDistancePerPulse(wheelCircum);
-		leftDrive.set(0);
-		rightDrive.set(0);
-		SmartDashboard.putBoolean("Left Motor Reverse", leftDrive.getInverted());
-		SmartDashboard.putBoolean("Right Motor Reversed", rightDrive.getInverted());
-	}
-	
-	//Direct object access methods
-	public double getleftDis() {
-		return leftEnc.getDistance();
-	}
-	public double getRightDis() {
-		return rightEnc.getDistance();
-	}
-	public void setMotors(double l, double r) {//sets motor speeds accounting for directions of motors
-		leftDrive.set(lReverse * (lPrev = l));
-		rightDrive.set(rReverse * (rPrev = r));
-	}
-	public void setLeft(double d) {
-		leftDrive.set(d);
-	}
-	public void setRight(double d) {
-		rightDrive.set(d);
-	}
-	public void encReset() {
-		leftEnc.reset();
-		rightEnc.reset();
-		lCompensate = 1.0;
-		rCompensate = 1.0;
-	}
-	
-	private double angle(double x, double y) {
-	    return Math.toDegrees(Math.atan2(x, y));
-	}
-	private double scaleCompensate(double d) { //This methods converts the compensate value found with the compensate method into what the speeds are actually scaled by
-		return d / (2 * (1 + Math.abs(d))) + 1;
-	}
-	private void compensate(double l, double r) {//work in progress
-		{
-			  //The powers we give to both motors. masterPower will remain constant while slavePower will change so that
-			  //the right wheel keeps the same speed as the left wheel.
-
-			 
-			  //Essentially the difference between the master encoder and the slave encoder. Negative if slave has 
-			  //to slow down, positive if it has to speed up. If the motors moved at exactly the same speed, this
-			  //value would be 0.
-			  double error = 0;
-			 
-			  //'Constant of proportionality' which the error is divided by. Usually this is a number between 1 and 0 the
-			  //error is multiplied by, but we cannot use floating point numbers. Basically, it lets us choose how much 
-			  //the difference in encoder values effects the final power change to the motor.
-			  double kp = 0.02;
-			 
-			  //Reset the encoders.
-			  encReset();
-			 
-			  //Repeat ten times a second.
-			  while(true)
-			  {
-			    //Set the motor powers to their respective variables.
-				leftDrive.set(l);
-				rightDrive.set(r);
-			 
-			    //This is where the magic happens. The error value is set as a scaled value representing the amount the slave
-			    //motor power needs to change. For example, if the left motor is moving faster than the right, then this will come
-			    //out as a positive number, meaning the right motor has to speed up.
-			    error = leftEnc.getRate() - rightEnc.getRate();
-			 
-			    //This adds the error to slavePower, divided by kp. The '+=' operator literally means that this expression really says 
-			    //"slavePower = slavepower + error / kp", effectively adding on the value after the operator.
-			    //Dividing by kp means that the error is scaled accordingly so that the motor value does not change too much or too 
-			    //little. You should 'tune' kp to get the best value. For us, this turned out to be around 5. 
-			    r += error * kp;
-			 
-			    //Reset the encoders every loop so we have a fresh value to use to calculate the error.
-			    encReset();
-			 
-			    //Makes the loop repeat ten times a second. If it repeats too much we lose accuracy due to the fact that we don't have
-			    //access to floating point math, however if it repeats to little the proportional algorithm will not be as effective.
-			    //Keep in mind that if this value is changed, kp must change accordingly.
-			  }
-			}
-	}
-	public void getSpeeds() {//converts input values to motor speeds
-		if (yFinal > 0.0) {
-    		if (xFinal > 0.0) {
-        	    rSpeed = yFinal - xFinal;
-        	    lSpeed = Math.max(yFinal, xFinal);
-        	}
-			else {
-        	    rSpeed = Math.max(yFinal, -xFinal);
-        	    lSpeed = yFinal + xFinal;
-        	}
+    /**
+     * This function is called periodically during autonomous
+     */
+    public void autonomousPeriodic() {
+    	switch(autoSelected) {
+    	case lowBarAuto:
+         autoPhase.autoProcess3();  
+            break;
+    	case autoMID:
+    		autoPhase.autoProcess3Right();
+    		break;
+    	case autoMIDLeft:
+    		autoPhase.autoProcess3();
+    		break;
+    	case autoLEFT:
+    		autoPhase.autoProcess5();
+    		break;
+    	default:
+    	//Put default auto code here
+            break;
     	}
-		else {
-        	if (xFinal > 0.0) {
-        	    rSpeed = -Math.max(-yFinal, xFinal);
-        	    lSpeed = yFinal + xFinal;
-        	}
-			else {
-        	    rSpeed = yFinal - xFinal;
-        	    lSpeed = -Math.max(-yFinal, -xFinal);
-        	}
-    	}
-	}
-	public void getValues(double x, double y, boolean sensitivity, boolean acc) {//takes input values and applies appropriate calculations to values to account for human error and/or joystick deficiencies
-		xFinal = x;
-		yFinal = y;
-		if(sensitivity) {
-			xFinal = sensitivity2Calc(xFinal);
-			yFinal = sensitivityCalc(yFinal);
-		}	
+    }
 
-		if(acc) {
-			xFinal = accCalc(xFinal);
-			yFinal = accCalc(yFinal);
-		}
-	}
-	
-	//Teleop Driving methods
-	private double accCalc(double input) {//applies a delay for motors to reach full speed for larger joystick inputs
-		if(input > accBound && accLoopCount < accLoop) {//positive inputs
-	    		return accBound + (input - accBound) * (accLoopCount++ / (double) accLoop);
-	    }
-		else if(input < -accBound && accLoopCount < accLoop) {//negative inputs
-	    		return -accBound + (input + accBound) * (accLoopCount++ / (double) accLoop);
-	    }
-	    else if(Math.abs(input) <= accBound) {
-	    	accLoopCount = 0;
-	    }
-		return input;
-	}
-	private double sensitivityCalc(double input) {//Squares magnitude of input to reduce magnitude of smaller joystick inputs
-		if (input >= 0.0) {
-	        return (input * input);
-        }
-		else {
-    	    return -(input * input);
-    	}
-	}
-	private double sensitivity2Calc(double input) {//Alternate sensitivity calculation currently not being used
-		return sensitivity * input + (1 - sensitivity) * Math.pow(input, inputPow);
-	}
-
-	private void exactDrive() {//This method will essentially "round" the joystick inputs to purely in the x direction or purely in the y direction depending on which has greater magnitude 
-		if(Math.abs(yInput) > Math.abs(xInput)) {
-			xInput = 0;
-		}
-		else {
-			yInput = 0;
-		}
-	}
-	public void teleopDrive() {//Implements individual driving and input methods to allow driving in teleop
-		xInput = xReverse * driveStick.getRawAxis(xAxis);
-		yInput = yReverse * driveStick.getRawAxis(yAxis);
-		if(Math.abs(xInput) < 0.2) {
-			xInput = 0;
-		}
-		if(Math.abs(yInput) < 0.2) {
-			yInput = 0;
-		}
-		if(Math.abs(xInput) < 0.1 && Math.abs(yInput) < 0.1) {
-			encReset();
-			setMotors(0, 0);
-		}
-		else {
-			if(driveStick.getRawButton(Constants.exactDriveButton)) {
-				exactDrive();
-			}
-			
-			getValues(xInput, yInput, useSensitivityCalc, useAccelerateCalc);
-			
-			getSpeeds();
-			
-			
-			if(useCompensate) {
-				compensate(lSpeed, rSpeed);
-			}
-			setMotors(lSpeed, rSpeed);
-		}
-
-	}
-	//Alternate drive method
-	public void driveTrain(){
-		if(driveStick.getRawButton(Constants.exactDriveButton)) {
-			leftDrive.set(-0.5);
-			rightDrive.set(0.5);		
-		}
-		else if(driveStick.getRawButton(1)) {
-			leftDrive.set(0.5);
-			rightDrive.set(-0.5);
-		}
-		else {
-			//quadrant 2
-			if (driveStick.getRawAxis(xAxis)< -0.2 && driveStick.getRawAxis(yAxis)<-0.2){
-				rightDrive.set(-0.5); //cables resulted inverted motor
-				leftDrive.set(Math.max(-1 * driveStick.getRawAxis(yAxis)/2, -0.5));				
-			}
-			//quadrant 1
-			else if(driveStick.getRawAxis(xAxis)> 0.2 && driveStick.getRawAxis(yAxis)<-0.2){
-				rightDrive.set(Math.min(driveStick.getRawAxis(yAxis)/2, -0.5));
-				leftDrive.set(0.5);
-			}
-			//quadrant 3
-			else if(driveStick.getRawAxis(xAxis)> 0.2 && driveStick.getRawAxis(yAxis)> 0.2){
-				leftDrive.set(-0.5);
-				rightDrive.set(Math.min(driveStick.getRawAxis(yAxis)/2,0.5));
-			}
-			//quadrant 4
-			else if(driveStick.getRawAxis(xAxis) < -0.2 && driveStick.getRawAxis(yAxis)>0.2){
-				rightDrive.set(0.5);
-				leftDrive.set(Math.min(driveStick.getRawAxis(yAxis)/2, 0.5));
-			}
-			else if(driveStick.getRawAxis(xAxis)>=-0.2 && driveStick.getRawAxis(xAxis)<=0.2 &&driveStick.getRawAxis(yAxis)<=-0.2){
-				rightDrive.set(driveStick.getRawAxis(yAxis));
-				leftDrive.set(-1*driveStick.getRawAxis(yAxis));
-			}
-			else if(driveStick.getRawAxis(xAxis)>=-0.2 && driveStick.getRawAxis(xAxis)<=0.2 &&driveStick.getRawAxis(yAxis)>=0.2){
-				rightDrive.set(driveStick.getRawAxis(yAxis));
-				leftDrive.set(-1*driveStick.getRawAxis(yAxis));
-			}
-			else if(driveStick.getRawAxis(yAxis)>= -0.2 && driveStick.getRawAxis(yAxis)<=0.2 &&driveStick.getRawAxis(xAxis)<=-0.2){
-				rightDrive.set(driveStick.getRawAxis(xAxis));
-				leftDrive.set(driveStick.getRawAxis(xAxis));
-			}
-			else if(driveStick.getRawAxis(yAxis)>= -0.2 && driveStick.getRawAxis(yAxis)<=0.2 &&driveStick.getRawAxis(xAxis)>=0.2){
-				rightDrive.set(driveStick.getRawAxis(xAxis));
-				leftDrive.set(driveStick.getRawAxis(xAxis));
-			}
-			else {
-				rightDrive.set(0);
-				leftDrive.set(0);
-			}
-				
-			//leftDrive.set((0.5 * j.getRawAxis(xAxis) + 0.5)*(-1 * j.getRawAxis(yAxis)));
-			//leftDrive2.set((0.5 * j.getRawAxis(xAxis) + 0.5)*(-1 * j.getRawAxis(yAxis)));
-			//rightDrive.set((-0.5 * j.getRawAxis(xAxis) + 0.5)*(-1 * j.getRawAxis(yAxis)));
-			//leftDrive.set(-1 * xReverse * j.getRawAxis(yAxis) - j.getRawAxis(xAxis));
-			//leftDrive2.set(-1 * xReverse * j.getRawAxis(yAxis) - j.getRawAxis(xAxis));
-			//rightDrive.set(-1 * yReverse * j.getRawAxis(yAxis) + j.getRawAxis(xAxis));
-		}
-	}
-	
-	//Autonomous driving
-	public void autoDrive(double speed)
-	{
-		compensate(lSpeed,rSpeed);
-		setMotors(speed,speed);
-	}
-	public void autoDrive(double l,double r)
-	{
-		setMotors(l,r);
-	}
-	
-	//Debugging and calibration methods
-	public void motorDirectionTest() {//Allows for testing direction of individual motors; should be used with toSmartDashboard in a loop
-		if(driveStick.getRawButton(7)) {
-			setLeft(0.6);
-		}
-		else if(driveStick.getRawButton(8)) {
-			setLeft(-0.6);
-		}
-		else {
-			setLeft(0);
-		}
-		
-		if(driveStick.getRawButton(9)) {
-			setRight(0.6);
-		}
-		else if(driveStick.getRawButton(10)) {
-			setRight(-0.6);
-		}
-		else {
-			setLeft(0);
-		}
-	}
-	public void toSmartDashboard()
-	{
-		SmartDashboard.putNumber("xInput: ", xInput);
-		SmartDashboard.putNumber("yInput: ", yInput);
-		SmartDashboard.putNumber("xFinal: ", xFinal);
-		SmartDashboard.putNumber("yFinal: ", yFinal);
-		SmartDashboard.putNumber("lComp: ", lCompensate);
-		SmartDashboard.putNumber("rComp: ", rCompensate);
-		SmartDashboard.putNumber("lSpeed: ", lSpeed);
-		SmartDashboard.putNumber("rSpeed: ", rSpeed);
-		SmartDashboard.putNumber("lRate: ", leftEnc.getRate());
-		SmartDashboard.putNumber("rRate: ", rightEnc.getRate());
-	}
+    /**
+     * This function is called periodically during operator control
+     */
+    public void teleopPeriodic() {
+        robot.teleopDrive();
+        shooter.shooterTick();
+        //arm.rotateArm();
+		robot.toSmartDashboard();
+    }
+    
+    /**
+     * This function is called periodically during test mode
+     */
+    public void testPeriodic() {
+    
+    }
+    
 }
