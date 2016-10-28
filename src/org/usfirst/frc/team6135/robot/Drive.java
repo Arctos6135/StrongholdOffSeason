@@ -106,8 +106,52 @@ public class Drive {
 	private double scaleCompensate(double d) { //This methods converts the compensate value found with the compensate method into what the speeds are actually scaled by
 		return d / (2 * (1 + Math.abs(d))) + 1;
 	}
-	private void compensate() {//work in progress
-		
+	private void compensate(double l, double r) {//work in progress
+		{
+			  //The powers we give to both motors. masterPower will remain constant while slavePower will change so that
+			  //the right wheel keeps the same speed as the left wheel.
+				double masterPower = l;
+				double slavePower = r;
+			 
+			  //Essentially the difference between the master encoder and the slave encoder. Negative if slave has 
+			  //to slow down, positive if it has to speed up. If the motors moved at exactly the same speed, this
+			  //value would be 0.
+			  double error = 0;
+			 
+			  //'Constant of proportionality' which the error is divided by. Usually this is a number between 1 and 0 the
+			  //error is multiplied by, but we cannot use floating point numbers. Basically, it lets us choose how much 
+			  //the difference in encoder values effects the final power change to the motor.
+			  double kp = 0.2;
+			 
+			  //Reset the encoders.
+			  encReset();
+			 
+			  //Repeat ten times a second.
+			  while(true)
+			  {
+			    //Set the motor powers to their respective variables.
+				leftDrive.set(l);
+				rightDrive.set(r);
+			 
+			    //This is where the magic happens. The error value is set as a scaled value representing the amount the slave
+			    //motor power needs to change. For example, if the left motor is moving faster than the right, then this will come
+			    //out as a positive number, meaning the right motor has to speed up.
+			    error = leftEnc.getRate() - rightEnc.getRate();
+			 
+			    //This adds the error to slavePower, divided by kp. The '+=' operator literally means that this expression really says 
+			    //"slavePower = slavepower + error / kp", effectively adding on the value after the operator.
+			    //Dividing by kp means that the error is scaled accordingly so that the motor value does not change too much or too 
+			    //little. You should 'tune' kp to get the best value. For us, this turned out to be around 5. 
+			    slavePower += error * kp;
+			 
+			    //Reset the encoders every loop so we have a fresh value to use to calculate the error.
+			    encReset();
+			 
+			    //Makes the loop repeat ten times a second. If it repeats too much we lose accuracy due to the fact that we don't have
+			    //access to floating point math, however if it repeats to little the proportional algorithm will not be as effective.
+			    //Keep in mind that if this value is changed, kp must change accordingly.
+			  }
+			}
 	}
 	public void getSpeeds() {//converts input values to motor speeds
 		if (yFinal > 0.0) {
@@ -202,7 +246,7 @@ public class Drive {
 			
 			
 			if(useCompensate) {
-				compensate();
+				compensate(lSpeed, rSpeed);
 			}
 			setMotors(lSpeed, rSpeed);
 		}
@@ -272,7 +316,7 @@ public class Drive {
 	//Autonomous driving
 	public void autoDrive(double speed)
 	{
-		compensate();
+		compensate(lSpeed,rSpeed);
 		setMotors(speed,speed);
 	}
 	public void autoDrive(double l,double r)
