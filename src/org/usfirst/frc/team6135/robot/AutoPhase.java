@@ -1,8 +1,9 @@
 package org.usfirst.frc.team6135.robot;
 //May require slight modification of this or drive class to work correctly in current drive class
 public class AutoPhase {
+	public final double robotRadius=21.25/2;
 	public static double fullBlastDis=212;
-	public static double turningDis=0.5;
+	public static double turningDis=0;
 	public static double scoringDis=80;
 	public static int counter=0;
 	Drive robot;
@@ -12,10 +13,9 @@ public class AutoPhase {
 	}
 	public void blastThrough(double travelDis)
 	{
-		robot.autoDrive(0.5);
 		if(Math.min(robot.getleftDis(),robot.getRightDis())<travelDis)
 		{
-			robot.autoDrive(0.5);
+			robot.autoDrive(1.0);
 		}
 		else
 		{
@@ -26,7 +26,7 @@ public class AutoPhase {
 	}
 	public double calcTurnDis(double degree)
 	{
-		return Math.abs(degree)*Math.PI/180.0*21.25/2;
+		return 2*Math.PI*robotRadius*Math.abs(degree)/360;
 	}
 	public void turn(double degree)
 	{
@@ -48,7 +48,7 @@ public class AutoPhase {
 		{
 			if(robot.getRightDis()<turningDis)
 			{
-				robot.autoDrive(0.5, 0);
+				robot.autoDrive(0, 0.5);
 			}
 			else
 			{
@@ -62,10 +62,7 @@ public class AutoPhase {
 	{
 		if(Math.min(robot.getleftDis(),robot.getRightDis())<scoringDis)
 		{
-			robot.autoDrive(0.7);
-		}
-		else if(Math.min(robot.getleftDis(),robot.getRightDis())<scoringDis){
-			robot.autoDrive(turningDis, 0);
+			robot.autoDrive(-0.7);
 		}
 		else{
 			robot.autoDrive(0);
@@ -96,7 +93,7 @@ public class AutoPhase {
 	public void autoProcess1()
 	{
 		int[] processNums={1,            2,3};
-		double[] vals=    {fullBlastDis,60,0};
+		double[] vals=    {fullBlastDis,240,0};
 		if(counter<3)
 		{
 			autoProcesses(processNums[counter],vals[counter]);
@@ -109,7 +106,7 @@ public class AutoPhase {
 	public void autoProcess3()
 	{
 		int[] processNums={1,    2,1,  2, 1 ,2, 3};
-		double[] vals=    {180,-90,100,90,84,60,0};
+		double[] vals=    {180,-90,100,90,84,240,0};
 		if(counter<7)
 		{
 			autoProcesses(processNums[counter],vals[counter]);
@@ -122,7 +119,7 @@ public class AutoPhase {
 	public void autoProcess3Right()
 	{
 		int[] processNums={1,    2,1,   2, 1 ,2, 3};
-		double[] vals=    {180,90,100,-90,84,-60,0};
+		double[] vals=    {180,90,100,-90,84,-240,0};
 		if(counter<7)
 		{
 			autoProcesses(processNums[counter],vals[counter]);
@@ -135,7 +132,7 @@ public class AutoPhase {
 	public void autoProcess5()
 	{
 		int[] processNums= {1             ,2,3};
-		double[] vals=     {fullBlastDis,-60,0};
+		double[] vals=     {fullBlastDis,-240,0};
 		if(counter<3)
 		{
 			autoProcesses(processNums[counter],vals[counter]);	
