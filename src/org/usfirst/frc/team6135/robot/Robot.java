@@ -1,4 +1,3 @@
-
 package org.usfirst.frc.team6135.robot;
 
 import edu.wpi.first.wpilibj.IterativeRobot;
@@ -16,6 +15,10 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 public class Robot extends IterativeRobot {
     final String defaultAuto = "Default";
     final String customAuto = "My Auto";
+    final String lowBarAuto = "Low bar";
+    final String autoMID = "AutoMID";
+    final String autoMIDLeft = "AutoMIDLeft";
+    final String autoLEFT= "AutoLEFT";
     String autoSelected;
     SendableChooser chooser;
     
@@ -33,6 +36,10 @@ public class Robot extends IterativeRobot {
         chooser = new SendableChooser();
         chooser.addDefault("Default Auto", defaultAuto);
         chooser.addObject("My Auto", customAuto);
+        chooser.addObject("Low Bar", lowBarAuto);
+        chooser.addObject("AutoMID", autoMID);
+        chooser.addObject("AutoMIDLeft", autoMIDLeft);
+        chooser.addObject("AutoLEFT", autoLEFT);
         SmartDashboard.putData("Auto choices", chooser);
 
 		driveStick = new Joystick(Constants.dStick);
@@ -63,12 +70,19 @@ public class Robot extends IterativeRobot {
      */
     public void autonomousPeriodic() {
     	switch(autoSelected) {
-    	case customAuto:
+    	case lowBarAuto:
          autoPhase.autoProcess3();  
             break;
-    	case defaultAuto:
+    	case autoMID:
+    		autoPhase.autoProcess3Right();
+    		break;
+    	case autoMIDLeft:
+    		autoPhase.autoProcess3();
+    		break;
+    	case autoLEFT:
+    		autoPhase.autoProcess5();
+    		break;
     	default:
-    	autoPhase.autoProcess3();
     	//Put default auto code here
             break;
     	}
