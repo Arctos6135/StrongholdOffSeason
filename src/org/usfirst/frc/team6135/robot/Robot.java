@@ -47,7 +47,24 @@ public class Robot extends IterativeRobot {
 		robot = new Drive(driveStick, Constants.rVicPort, Constants.lVicPort, Constants.lEnc1, Constants.lEnc2, Constants.rEnc1, Constants.rEnc2);
 		//arm = new RobotArm(operatorStick, Constants.wVicPort, Constants.lArmTal, Constants.rArmTal);
 		shooter = new RobotShooter(operatorStick, Constants.shootLFTalon, Constants.shootLBVic, Constants.shootRFTalon, Constants.shootRBVic);
-		autoPhase = new AutoPhase(robot); 
+		autoPhase = new AutoPhase(robot);
+	    
+	new Thread(() -> {
+            UsbCamera camera = CameraServer.getInstance().startAutomaticCapture();
+            camera.setResolution(640, 480);
+                
+            CvSink cvSink = CameraServer.getInstance().getVideo();
+            CvSource outputStream = CameraServer.getInstance().putVideo("Blur", 640, 480);
+            
+            Mat source = new Mat();
+            Mat output = new Mat();
+            
+            while(true) {
+                cvSink.grabFrame(source);
+                Imgproc.cvtColor(source, output, Imgproc.COLOR_BGR2GRAY);
+                outputStream.putFrame(output);
+            }
+        }).start();
     }
     
 	/**
